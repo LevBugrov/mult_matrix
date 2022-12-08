@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <math.h>
+#include <time.h>
+#include <fstream>
 
 int** randomMatrix(int n, int m);
 void res_zeros();
@@ -24,58 +26,76 @@ int thread_count;
 pthread_mutex_t mutex;
 
 int main(){
-    row1 = 8;
-    col1 = 8;
-    col2 = 8;
+    int n = 256;
+    row1 = n;
+    col1 = n;
+    col2 = n;
 
     matrix1 = randomMatrix(row1, col1);
     matrix2 = randomMatrix(col1, col2);
     result = randomMatrix(row1, col2);
     res_zeros();
 
-    thread_count = 4;
-
+    thread_count = 128;
+    clock_t time;
+    std::ofstream fout;
+    fout.open("results.txt");
     // print_matrix(matrix1, row1, col1);
     // print_matrix(matrix2, col1, col2);
     
     // линейное умножение
+    time = clock();
     multLin();
-    print_matrix(result, row1, col2);
+    //print_matrix(result, row1, col2);
+    fout << clock()-time<<"\n";
     res_zeros();
 
     pthread_t *thread_handles = (pthread_t*)malloc(thread_count * sizeof(pthread_t));
     
 
-    // умножение по строкам
-    for(long thread = 0; thread < thread_count; ++thread)
-        pthread_create(&thread_handles[thread], NULL, multRow, (void*) thread);
-    for(long thread = 0; thread < thread_count; ++thread)
-        pthread_join(thread_handles[thread], NULL);
-    print_matrix(result, row1, col2);
-    res_zeros();
+    for(thread_count=1; thread_count<=9; thread_count*=2){
+        // умножение по строкам
+        time = clock();
+        for(long thread = 0; thread < thread_count; ++thread)
+            pthread_create(&thread_handles[thread], NULL, multRow, (void*) thread);
+        for(long thread = 0; thread < thread_count; ++thread)
+            pthread_join(thread_handles[thread], NULL);
+        
+        print_matrix(result, row1, col2);
+        fout << clock()-time<<" ";
+        res_zeros();
+        
 
-    // умножение по столбцам
-    pthread_mutex_init(&mutex, NULL);
-    for(long thread = 0; thread < thread_count; ++thread)
-        pthread_create(&thread_handles[thread], NULL, multColumn, (void*) thread);
-    for(long thread = 0; thread < thread_count; ++thread)
-        pthread_join(thread_handles[thread], NULL);
-    
-    pthread_mutex_destroy(&mutex);
-    print_matrix(result, row1, col2);
-    res_zeros();
+        // умножение по столбцам
+        time = clock();
+        pthread_mutex_init(&mutex, NULL);
+        for(long thread = 0; thread < thread_count; ++thread)
+            pthread_create(&thread_handles[thread], NULL, multColumn, (void*) thread);
+        for(long thread = 0; thread < thread_count; ++thread)
+            pthread_join(thread_handles[thread], NULL);
+        
+        pthread_mutex_destroy(&mutex);
+        print_matrix(result, row1, col2);
+        fout << clock()-time<<" ";
+        res_zeros();
 
-    // умножение по блокам
-    pthread_mutex_init(&mutex, NULL);
-    for(long thread = 0; thread < thread_count; ++thread)
-        pthread_create(&thread_handles[thread], NULL, multBlock, (void*) thread);
-    for(long thread = 0; thread < thread_count; ++thread)
-        pthread_join(thread_handles[thread], NULL);
+        // умножение по блокам
+        time = clock();
+        pthread_mutex_init(&mutex, NULL);
+        for(long thread = 0; thread < thread_count; ++thread)
+            pthread_create(&thread_handles[thread], NULL, multBlock, (void*) thread);
+        for(long thread = 0; thread < thread_count; ++thread)
+            pthread_join(thread_handles[thread], NULL);
+        
+        pthread_mutex_destroy(&mutex);
+        print_matrix(result, row1, col2);
+        fout << clock()-time<<" ";
+        res_zeros();
+        fout <<"\n";
+    }
     
-    pthread_mutex_destroy(&mutex);
-    print_matrix(result, row1, col2);
-    res_zeros();
-    
+
+    fout.close();
     return 0;
 }
 
