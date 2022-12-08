@@ -26,7 +26,7 @@ int thread_count;
 pthread_mutex_t mutex;
 
 int main(){
-    int n = 256;
+    int n = 2048;
     row1 = n;
     col1 = n;
     col2 = n;
@@ -46,14 +46,14 @@ int main(){
     // линейное умножение
     time = clock();
     multLin();
-    //print_matrix(result, row1, col2);
+    // print_matrix(result, row1, col2);
     fout << clock()-time<<"\n";
     res_zeros();
 
     pthread_t *thread_handles = (pthread_t*)malloc(thread_count * sizeof(pthread_t));
     
 
-    for(thread_count=1; thread_count<=9; thread_count*=2){
+    for(thread_count=1; thread_count<=128; thread_count*=2){
         // умножение по строкам
         time = clock();
         for(long thread = 0; thread < thread_count; ++thread)
@@ -61,7 +61,7 @@ int main(){
         for(long thread = 0; thread < thread_count; ++thread)
             pthread_join(thread_handles[thread], NULL);
         
-        print_matrix(result, row1, col2);
+        // print_matrix(result, row1, col2);
         fout << clock()-time<<" ";
         res_zeros();
         
@@ -75,7 +75,7 @@ int main(){
             pthread_join(thread_handles[thread], NULL);
         
         pthread_mutex_destroy(&mutex);
-        print_matrix(result, row1, col2);
+        // print_matrix(result, row1, col2);
         fout << clock()-time<<" ";
         res_zeros();
 
@@ -88,7 +88,7 @@ int main(){
             pthread_join(thread_handles[thread], NULL);
         
         pthread_mutex_destroy(&mutex);
-        print_matrix(result, row1, col2);
+        //print_matrix(result, row1, col2);
         fout << clock()-time<<" ";
         res_zeros();
         fout <<"\n";
@@ -106,7 +106,7 @@ int** randomMatrix(int n, int m){
     for (size_t i = 0; i < n; i++){
         A[i] = new int[m];
         for (size_t j = 0; j < m; j++)
-            A[i][j] = rand()%100;    
+            A[i][j] = rand()%10;    
         }
     return A;
 }
@@ -161,38 +161,33 @@ void* multColumn(void* arg){
     long col_first = th_num * block_size;
     long col_last = (th_num+1) * block_size;
     
+    pthread_mutex_lock(&mutex);
     for (int i = col_first; i < col_last; ++i)
         for (int j = 0; j < col2; ++j) 
             for (int k = 0; k < row1; ++k){
-                long buff = result[k][j] + matrix1[k][i] * matrix2[i][j];
-                pthread_mutex_lock(&mutex);
-                result[k][j] = buff;
-                pthread_mutex_unlock(&mutex);
+                result[k][j] += matrix1[k][i] * matrix2[i][j];
             }
+    pthread_mutex_unlock(&mutex);
     return NULL;
 }
 
 void* multBlock(void* arg){
-    long i, j, k, th_num, portion_size_columns, portion_size_rows, column_start, col_last, num_of_blocks, row_start, row_end, num_of_column_blocks;
-    th_num = (long)(arg);
-    num_of_blocks = (long)pow(2, thread_count);
-    num_of_column_blocks = (long)num_of_blocks/2;
-    if(num_of_blocks == 1) {num_of_column_blocks = 1;}
-    portion_size_columns = (long)(col2/num_of_column_blocks);
-    portion_size_rows = (long)(row1/2);
-    if(num_of_blocks == 1) {portion_size_rows = row1;}
-    column_start = (th_num%num_of_column_blocks) * portion_size_columns;
-    col_last = ((th_num)%num_of_column_blocks + 1) * portion_size_columns;
-    row_start = (int)(th_num/num_of_column_blocks) * portion_size_rows;
-    row_end = (int)(((th_num)/num_of_column_blocks)+1) * portion_size_rows;
+    long th_num = (long)(arg);
+
+    long y_size = row1/(thread_count+1/2);
+    long x_size = col2/(thread_count);
+
+    long row_first = (th_num/thread_count) * y_size;
+    long row_last = row_first + y_size;
+    long col_first = (th_num%thread_count) * x_size;
+    long col_last = col_first + x_size;
+
     pthread_mutex_lock(&mutex);
-    for(int k=row_start; k < row_end; k++) {
-            for(int h=0; h < col2; h++) {
-                for(int l=column_start; l<col_last; l++) {
-                    result[k][h] += matrix1[k][l]*matrix2[l][h];
-                }
-            }
-        }
+    for(int i=row_first; i < row_last; i++)
+        for(int j=col_first; j<col_last; j++) 
+            for(int k=0; k < col2; k++)          
+                result[i][k] += matrix1[i][j]*matrix2[j][k];
+            
     pthread_mutex_unlock(&mutex);
     return NULL;
 }
