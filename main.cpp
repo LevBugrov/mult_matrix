@@ -46,7 +46,7 @@ int main(){
     // линейное умножение
     time = clock();
     multLin();
-    print_matrix(result, row1, col2);
+    // print_matrix(result, row1, col2);
     fout << clock()-time<<"\n";
     res_zeros();
 
@@ -88,7 +88,7 @@ int main(){
             pthread_join(thread_handles[thread], NULL);
         
         pthread_mutex_destroy(&mutex);
-        print_matrix(result, row1, col2);
+        // print_matrix(result, row1, col2);
         fout << clock()-time<<" ";
         res_zeros();
         fout <<"\n";
