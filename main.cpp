@@ -26,7 +26,7 @@ int thread_count;
 pthread_mutex_t mutex;
 
 int main(){
-    int n = 2048;
+    int n = 8;
     row1 = n;
     col1 = n;
     col2 = n;
@@ -46,7 +46,7 @@ int main(){
     // линейное умножение
     time = clock();
     multLin();
-    // print_matrix(result, row1, col2);
+    print_matrix(result, row1, col2);
     fout << clock()-time<<"\n";
     res_zeros();
 
@@ -88,7 +88,7 @@ int main(){
             pthread_join(thread_handles[thread], NULL);
         
         pthread_mutex_destroy(&mutex);
-        //print_matrix(result, row1, col2);
+        print_matrix(result, row1, col2);
         fout << clock()-time<<" ";
         res_zeros();
         fout <<"\n";
@@ -174,7 +174,7 @@ void* multColumn(void* arg){
 void* multBlock(void* arg){
     long th_num = (long)(arg);
 
-    long y_size = row1/(thread_count+1/2);
+    long y_size = row1/(thread_count);
     long x_size = col2/(thread_count);
 
     long row_first = (th_num/thread_count) * y_size;
